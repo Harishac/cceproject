@@ -123,7 +123,7 @@ class visualize_rawdata(Resource):
             parser = reqparse.RequestParser()
             parser.add_argument('request_id', type=str)
             args = parser.parse_args()
-            path = server_path + "/" + args.get("request_id") + "/" + "cleandata"
+            path = server_path + "/" + args.get("request_id") + "/" + "preprocess"
             file = os.listdir(path)
 
             df = pandas.read_csv(path+"/"+file[0])
