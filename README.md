@@ -11,5 +11,5 @@ Dependencies : All dependencies are mentoined in Requirement.txt
   # Command to run server
   python server.py
   
-  #Go to webrowser http://localhost:5000
+  # Go to webrowser http://localhost:5000
   
