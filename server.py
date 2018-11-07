@@ -9,7 +9,7 @@ from werkzeug.datastructures import FileStorage
 import parser
 import uuid
 from preprocess.pre_process import clean_data
-
+import importlib
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
@@ -31,6 +31,12 @@ file_visualize_model = api.parser()
 file_visualize_model.add_argument('request_id', type=str, location='args')
 
 preprocess_model = api.model("preprocess_request", {
+                 'request_id' : fields.String,
+                 'method' : fields.String
+                })
+
+analytic_model = api.model("analytic_request", {
+                 'analytic_name' : fields.String,
                  'request_id' : fields.String,
                  'method' : fields.String
                 })
@@ -134,6 +140,60 @@ class visualize_rawdata(Resource):
             return {"data": df_slice.to_dict(orient='list'), "status": "Success"}, 200
         except Exception as e:
             return {"data": "Failed to read data, ERROR::" + str(e), "status": "Failed"}
+
+
+@api.route('/api/v1/analytic')
+class train_analytic(Resource):
+    @api.expect(analytic_model)
+    def post(self):
+        try:
+            parser = reqparse.RequestParser()
+            parser.add_argument('analytic_name', type=str, location="json", required=True)
+            parser.add_argument('method', type=str, location="json", required=True)
+            parser.add_argument('request_id', type=str, location="json", required=True)
+            args = parser.parse_args()
+            path = server_path + "/" + args.get("request_id") + "/" + "preprocess"
+            file = os.listdir(path)
+            df = pandas.read_csv(path + "/" + file[0])
+            module_name = "analytics."+ args.get('analytic_name')
+            module  = importlib.import_module(module_name)
+            analytic_class = getattr(module, args.get("analytic_name"))
+            if args.get("method") == "train":
+                result = analytic_class.train(df)
+                if result["status"] == "success":
+
+                    path = server_path + "/" + args.get("request_id") + "/" + args.get("analytic_name")
+                    if os.path.exists(path):
+                        pass
+                    else:
+                        os.mkdir(path)
+                    file_name = os.path.join(path, "model.json")
+                    fp = open(file_name, "w")
+                    json.dump(result, fp)
+                    fp.close()
+                return result
+
+            elif args.get("method") == "score":
+                path = server_path + "/" + args.get("request_id") + "/" + args.get("analytic_name")
+                model_file = os.path.join(path, "model.json")
+                fp = open(model_file, "r")
+                dct_model = json.load(fp)
+                fp.close()
+                result, df_out, error = analytic_class.score(df, dct_model["coeff"])
+                if result == "success":
+
+                    if os.path.exists(path):
+                        pass
+                    else:
+                        os.mkdir(path)
+                    file_name = os.path.join(path, "output.csv")
+                    df_out.to_csv(file_name, index=False)
+                    return {"status":"success"}
+                else:
+                    return {"status": "failed", "error": error}
+        except Exception as e:
+            return {"status": "failed", "error": str(e)}
+
 
 
 
