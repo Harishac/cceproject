@@ -30,6 +30,11 @@ file_upload_model.add_argument('file', type=FileStorage, location='files', requi
 file_visualize_model = api.parser()
 file_visualize_model.add_argument('request_id', type=str, location='args')
 
+output_model = api.parser()
+output_model.add_argument('request_id', type=str, location='args')
+output_model.add_argument('method', type=str, location='args')
+output_model.add_argument('analytic_name', type=str, location='args')
+
 preprocess_model = api.model("preprocess_request", {
                  'request_id' : fields.String,
                  'method' : fields.String
@@ -156,7 +161,7 @@ class train_analytic(Resource):
             file = os.listdir(path)
             df = pandas.read_csv(path + "/" + file[0])
             module_name = "analytics."+ args.get('analytic_name')
-            module  = importlib.import_module(module_name)
+            module = importlib.import_module(module_name)
             analytic_class = getattr(module, args.get("analytic_name"))
             if args.get("method") == "train":
                 result = analytic_class.train(df)
@@ -196,8 +201,44 @@ class train_analytic(Resource):
 
 
 
+@api.route('/api/v1/listanalytics')
+class list_analytic(Resource):
+    def get(self):
+        path = os.path.join(server_path, "analytics.json")
+        fp = open(path, "r")
+        analytics = json.load(fp)
+        fp.close()
+        return analytics
 
+@api.route('/api/v1/output')
+class get_result(Resource):
+    @api.expect(output_model)
+    def get(self):
+        try:
+            parser = reqparse.RequestParser()
+            parser.add_argument('analytic_name', type=str, location="args", required=True)
+            parser.add_argument('method', type=str, location="args", required=True)
+            parser.add_argument('request_id', type=str, location="args", required=True)
+            args = parser.parse_args()
+            path = server_path + "/" + args.get("request_id") + "/" + args.get("analytic_name")
+            if args.get("method") == "train":
+                file_name = "model.json"
+            else:
+                file_name = "output.csv"
 
+            file_name = os.path.join(path, file_name)
+            if os.path.exists(file_name):
+                if args.get("method") == "train":
+                    fp = open(file_name, "r")
+                    data = json.load(fp)
+                    fp.close()
+                    return data
+                else:
+                    fp = open(file_name, "r")
+                    df = pandas.read_csv(file_name)
+                    return {"data": df.to_dict(orient='list')}
+        except Exception as e:
+            return {"error": str(e)}
 
 
 if __name__ == "__main__":
