@@ -10,8 +10,15 @@ def clean_data(location, method):
     df_raw = pandas.read_csv(location)
 
     """
-    add logic to clean data
+  import pandas as pd
+  import numpy as np
+
+  df_raw=pd.read_csv('Source/test1.csv')
+  df1=df_raw.replace('[^0-9]','',regex=True).astype(float)
+  df2=df1.fillna(df1.mean())
+  clean_data=df2
+  print(clean_data)
     """
-    df_clean = df_raw #just for testing
+    df_clean = clean_data
 
     return df_clean
