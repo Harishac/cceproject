@@ -89,7 +89,7 @@ class preprocess(Resource):
             path = server_path + "/" + args.get("request_id") + "/" + "rawdata"
             file = os.listdir(path)[0]
 
-            df_clean = clean_data(path + "/" + file, args.get("method"))
+            df_clean, df_outlier = clean_data(path + "/" + file, args.get("method"))
             clean_path = server_path + "/" + args.get("request_id") + "/" + "preprocess"
             if os.path.exists(clean_path):
                 pass
@@ -97,7 +97,8 @@ class preprocess(Resource):
                 os.mkdir(clean_path)
             clean_path = clean_path + "/" + file
             df_clean.to_csv(clean_path, index=False)
-            return {"status": "Success", "Description": "Data cleaned"}, 200
+
+            return {"status": "Success", "Outliers": df_outlier.to_dict(orient='list')}, 200
         except Exception as e:
             return {"status": "Failed", "Description": "ERROR::" + str(e)}
 
@@ -243,4 +244,4 @@ class get_result(Resource):
 
 if __name__ == "__main__":
     #app.run(debug=True)
-    serve(app, port=5000)
+    serve(app, port=5510)
