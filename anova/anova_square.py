@@ -169,6 +169,7 @@ def anova(df):
         print("m2 = "+str(round(m2,3)))
         print("c  = "+str(round(c,3)))
         print("equation is:\ny = " + str(round(m1,3)) + "x^2 + "+ str(round(m2,3)) + "x + " + str(round(c,3)))
+        square_eq=("y = " + str(round(m1,3)) + "x^2 + "+ str(round(m2,3)) + "x + " + str(round(c,3)))
         #print(col_name_y + " = " + str(round(m1,3)) + " * " + col_name_x^2 + " + " + str(round(m2,3)) + " * " + col_name_x + " + "   + str(round(c,3)))
 
 
@@ -205,7 +206,7 @@ def anova(df):
         F_stats=MSR/MSE
         print("F value = ", F_stats)
         #changes done here
-        square_res={'SSE':SSE,'SSR':SSR,'SST':SST,'MSE':MSE,'MSR':MSR,'F_Stat':F_stats}
+        square_res={'SSE':SSE,'SSR':SSR,'SST':SST,'MSE':MSE,'MSR':MSR,'F_Stat':F_stats,'Equation':square_eq}
         
     else:
         print("Only bivariate non-linear regression is supported...")
