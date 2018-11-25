@@ -10,6 +10,8 @@ import parser
 import uuid
 from preprocess.pre_process import clean_data
 import importlib
+from analytics_lst import analytics as lst
+from anova import anova
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
@@ -39,6 +41,10 @@ preprocess_model = api.model("preprocess_request", {
                  'request_id' : fields.String,
                  'method' : fields.String
                 })
+
+anova_model = api.model("anova_request", {
+                 'request_id': fields.String
+                    })
 
 analytic_model = api.model("analytic_request", {
                  'analytic_name' : fields.String,
@@ -205,11 +211,12 @@ class train_analytic(Resource):
 @api.route('/api/v1/listanalytics')
 class list_analytic(Resource):
     def get(self):
-        path = os.path.join(server_path, "analytics.json")
-        fp = open(path, "r")
-        analytics = json.load(fp)
-        fp.close()
-        return analytics
+        #path = os.path.join(server_path, "analytics.json")
+        #fp = open("analytics.json", "r")
+        #analytics = json.load(fp)
+        #fp.close()
+        print(lst)
+        return lst
 
 @api.route('/api/v1/output')
 class get_result(Resource):
@@ -241,6 +248,15 @@ class get_result(Resource):
         except Exception as e:
             return {"error": str(e)}
 
+@api.route('/api/v1/anova')
+class run_anova(Resource):
+    @api.expect(anova_model)
+    def post(self):
+        df = pandas.DataFrame()
+        stats = {"coeff":{}}
+        an = anova(df,stats)
+
+        return {"SSE":"test"}
 
 if __name__ == "__main__":
     #app.run(debug=True)

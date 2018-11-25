@@ -1,5 +1,5 @@
 import pandas as pd
-import regression_functions as rf       #all functions are defined in this file
+import analytics.regression_functions as rf       #all functions are defined in this file
 
 class simple_regression(object):
     def __init__(self):
