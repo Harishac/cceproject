@@ -1,6 +1,7 @@
 #import data from previous groups
 import pandas as pd
 import scipy.stats as ss
+import json
 
 def annova(df, coeff):
     #need from previous groups
@@ -44,61 +45,30 @@ def annova(df, coeff):
     sse_list=[(df.loc[i][col_name_y]-df.loc[i]['ycal'])**2 for i in df.index]
 #    print 'sqr(y-ycap)', sse_list
     SSE=sum(sse_list)
-    print 'SSE= sum(( y-ycap )**2)=', SSE
+    print ('SSE= sum(( y-ycap )**2)=', SSE)
 
     yBar= sum(df[col_name_y]) / len(df[col_name_y])
     #ssr_list=[]
     ssr_list= [(df.loc[i]['ycal']-yBar)**2 for i in df.index]
     SSR=sum(ssr_list)
-    print 'SSR=sum((Ycap-Ybar)**2)=', SSR
+    print ('SSR=sum((Ycap-Ybar)**2)=', SSR)
 
     SST=SSE+SSR
-    print 'SST= SSE + SSR         =', SST
+    print ('SST= SSE + SSR         =', SST)
 
     dfT=count-1
     dfR=k
     dfE=dfT-dfR
-    print 'dfT=',dfT, 'dfR=',dfR, 'dfE=', dfE
+    print ('dfT=',dfT, 'dfR=',dfR, 'dfE=', dfE)
 
     MSR=SSR/dfR
     MSE=SSE/dfE
-    print 'MSR =',MSR, 'MSE=',  MSE
+    print ('MSR =',MSR, 'MSE=',  MSE)
     
     F_stats=MSR/MSE
-    print "F_stats = ", F_stats
+    print ("F_stats = ", F_stats)
 
+    #changes done here
+    linear_res={'SSE':SSE,'SSR':SSR,'SST':SST,'MSE':MSE,'MSR':MSR,'F_Stat':F_stats}
+    return(linear_res)
     
-
-    #......Creating ANOVA Table...........
-    source=[]
-    DF=[]
-    SS=[]
-    MS=[]
-    F=[]
-    P=[]
-
-    source.append('Regression')
-    source.append('Error')
-    source.append('Total')
-    DF.append(dfR)
-    DF.append(dfE)
-    DF.append(dfT)
-    SS.append(SSR)
-    SS.append(SSE)
-    SS.append(SST)
-    MS.append(MSR)
-    MS.append(MSE)
-    MS.append('')
-    F.append(F_stats)
-    F.append('')
-    F.append('')
-
-    aTable = pd.DataFrame(columns=['source', 'DF', 'SS','MS', 'F'])
-    for i in range(3):
-        aTable = aTable.append({'source': source[i], 'DF':DF[i], 'SS':SS[i],'MS':MS[i], 'F':F[i]}, ignore_index=True)
-
-
-    print '-------------------------------------------------------'
-    print aTable
-    print '-------------------------------------------------------'
-
