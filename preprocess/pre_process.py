@@ -1,17 +1,42 @@
-import pandas
+import pandas as pd
+import numpy as np
 
-def clean_data(location, method):
-    """
+def clean_data(location,method="drop"):
 
-    :param location: String location of raw file
-    :return: data frame of cleaned data
-    """
+    missingvalues=["NA","N/A","na","n/a"]
+    df_raw = pd.read_csv(location,na_values=missingvalues,header=None, skiprows=1)
+    df_raw=df_raw.replace('[^0-9]','',regex=True).astype(float)
+ 
+    if method=="drop":
+        df_method=df_raw.dropna(how='any')
 
-    df_raw = pandas.read_csv(location)
+    elif method=="avg":
+        df_method=df_raw.fillna(df_raw.mean())
 
-    """
-    add logic to clean data
-    """
-    df_clean = df_raw #just for testing
+    df_method=df_method.reset_index(drop=True)
 
-    return df_clean
+    stds = 1.0
+    lenloc=len(df_method.columns)
+    if lenloc==1:
+        df_method.columns=['Y']
+        df_outliers=df_method
+    elif lenloc==2:
+        df_method.columns=['Y','X1']
+        outliers = df_method[['X1']].transform(lambda group: (group - group.mean()).abs().div(group.std())) > stds  
+        df_outliers=df_method[outliers.any(axis=1)]
+    elif lenloc==3:
+        df_method.columns=['Y','X1','X2']
+        outliers = df_method[['X1','X2']].transform(lambda group: (group - group.mean()).abs().div(group.std())) > stds  
+        df_outliers=df_method[outliers.any(axis=1)]
+    elif lenloc==4:
+        df_method.columns=['Y','X1','X2','X3']
+        outliers = df_method[['X1','X2','X3']].transform(lambda group: (group - group.mean()).abs().div(group.std())) > stds  
+        df_outliers=df_method[outliers.any(axis=1)]
+    if lenloc==1:
+        df_clean=df_method
+        df_outliers=[]
+    else:
+        df_clean=pd.concat([df_method,df_outliers]).drop_duplicates(keep=False)
+
+    return df_clean,df_outliers
+
