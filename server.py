@@ -10,7 +10,6 @@ import parser
 import uuid
 from preprocess.pre_process import clean_data
 import importlib
-import multiprocessing
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app)
@@ -26,8 +25,7 @@ else:
 
 
 file_upload_model = api.parser()
-file_upload_model.add_argument('trainfile', type=FileStorage, location='files', required=True)
-file_upload_model.add_argument('testfile', type=FileStorage, location='files', required=True)
+file_upload_model.add_argument('file', type=FileStorage, location='files', required=True)
 
 file_visualize_model = api.parser()
 file_visualize_model.add_argument('request_id', type=str, location='args')
@@ -48,7 +46,7 @@ analytic_model = api.model("analytic_request", {
                  'method' : fields.String
                 })
 
-@api.route('/api/v1/filesupload')
+@api.route('/api/v1/fileupload')
 class upload_file(Resource):
 
     @api.expect(file_upload_model)
@@ -56,17 +54,16 @@ class upload_file(Resource):
         try:
             requestid = uuid.uuid4().hex
             parser = reqparse.RequestParser()
-            parser.add_argument('trainfile', type=FileStorage, location='files', required=True)
-            parser.add_argument('testfile', type=FileStorage, location='files', required=True)
+            parser.add_argument('file', type=FileStorage, location='files', required=True)
             args = parser.parse_args()
             # checking if the file is present or not.
             #if 'file' not in request.files:
             #    return "No file found"
-            file = args.get('trainfile')
+            file = args.get('file')
             #server_path = r"C:\Users\Harish\PycharmProjects\cceproject\data\raw_data"
             #file = request.files['file']
 
-            path = os.path.join(os.path.join(server_path, requestid + "\\" + "traindata"))
+            path = os.path.join(os.path.join(server_path, requestid + "\\" + "rawdata"))
             if os.path.exists(path):
                 pass
             else:
@@ -74,20 +71,6 @@ class upload_file(Resource):
 
             abs_path = path + "\\" + file.filename
             file.save(abs_path)
-
-            file = args.get('testfile')
-            # server_path = r"C:\Users\Harish\PycharmProjects\cceproject\data\raw_data"
-            # file = request.files['file']
-
-            path = os.path.join(os.path.join(server_path, requestid + "\\" + "testdata"))
-            if os.path.exists(path):
-                pass
-            else:
-                os.makedirs(path)
-
-            abs_path = path + "\\" + file.filename
-            file.save(abs_path)
-
             return {"requestid": requestid, "upload_status": "success", "location": abs_path}, 200
         except Exception as e:
             requestid = None
@@ -103,31 +86,19 @@ class preprocess(Resource):
             parser.add_argument('request_id', type=str, location="json", required=True)
             parser.add_argument('method', type=str, location="json", required=True)
             args = parser.parse_args()
-            path = server_path + "/" + args.get("request_id") + "/" + "traindata"
+            path = server_path + "/" + args.get("request_id") + "/" + "rawdata"
             file = os.listdir(path)[0]
 
-            df_clean = clean_data(path + "/" + file, args.get("method"))
+            df_clean, df_outlier = clean_data(path + "/" + file, args.get("method"))
             clean_path = server_path + "/" + args.get("request_id") + "/" + "preprocess"
             if os.path.exists(clean_path):
                 pass
             else:
                 os.mkdir(clean_path)
-            clean_path = clean_path + "/" + "train.csv"
+            clean_path = clean_path + "/" + file
             df_clean.to_csv(clean_path, index=False)
 
-            path = server_path + "/" + args.get("request_id") + "/" + "testdata"
-            file = os.listdir(path)[0]
-
-            df_clean = clean_data(path + "/" + file, args.get("method"))
-            clean_path = server_path + "/" + args.get("request_id") + "/" + "preprocess"
-            if os.path.exists(clean_path):
-                pass
-            else:
-                os.mkdir(clean_path)
-            clean_path = clean_path + "/" + "test.csv"
-            df_clean.to_csv(clean_path, index=False)
-
-            return {"status": "Success", "Description": "Data cleaned"}, 200
+            return {"status": "Success", "Outliers": df_outlier.to_dict(orient='list')}, 200
         except Exception as e:
             return {"status": "Failed", "Description": "ERROR::" + str(e)}
 
@@ -189,7 +160,7 @@ class train_analytic(Resource):
             args = parser.parse_args()
             path = server_path + "/" + args.get("request_id") + "/" + "preprocess"
             file = os.listdir(path)
-            df = pandas.read_csv(path + "/" + "train.csv")
+            df = pandas.read_csv(path + "/" + file[0])
             module_name = "analytics."+ args.get('analytic_name')
             module = importlib.import_module(module_name)
             analytic_class = getattr(module, args.get("analytic_name"))
@@ -209,21 +180,19 @@ class train_analytic(Resource):
                 return result
 
             elif args.get("method") == "score":
-                model_path = server_path + "/" + args.get("request_id") + "/" + args.get("analytic_name")
-                model_file = os.path.join(model_path, "model.json")
+                path = server_path + "/" + args.get("request_id") + "/" + args.get("analytic_name")
+                model_file = os.path.join(path, "model.json")
                 fp = open(model_file, "r")
                 dct_model = json.load(fp)
                 fp.close()
-                path = server_path + "/" + args.get("request_id") + "/" + "preprocess"
-                df_test = pandas.read_csv(path + "/" + "test.csv")
-                result, df_out, error = analytic_class.score(df_test, dct_model["coeff"])
+                result, df_out, error = analytic_class.score(df, dct_model["coeff"])
                 if result == "success":
 
                     if os.path.exists(path):
                         pass
                     else:
                         os.mkdir(path)
-                    file_name = os.path.join(model_path, "output.csv")
+                    file_name = os.path.join(path, "output.csv")
                     df_out.to_csv(file_name, index=False)
                     return {"status":"success"}
                 else:
@@ -275,4 +244,4 @@ class get_result(Resource):
 
 if __name__ == "__main__":
     #app.run(debug=True)
-    serve(app, port=5000)
+    serve(app, port=5510)
