@@ -4,20 +4,6 @@ pd.set_option('display.max_rows', None)  # or 1000
 import math
 
 
-def read_csv_into_df(file_path):
-    #print(file_path)
-
-    #read the CSV and store in dataframe 'df'
-    my_df = pd.read_csv(file_path)
-
-    #print the dataframe
-    #print("Data Frame: \n")
-    #print(my_df)
-    
-    #return the dataframe read
-    return my_df
-
-
 def get_xy(a1,b1,c1,a2,b2,c2):
     #The equations will be of the form:
     #a1x + b1y = c1
