@@ -6,6 +6,9 @@ def clean_data(location,method="drop"):
     df_raw = pd.read_csv(location,na_values=missingvalues)
     df_raw=df_raw.replace('[^0-9]','',regex=True).astype(float)
     #print(df_raw)
+    if not bool(method):
+        method = "drop"
+
     if method=="drop":
         df_method=df_raw.dropna(how='any')
         #print("****Printing the values after filtering the NA****")

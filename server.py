@@ -90,7 +90,7 @@ class preprocess(Resource):
         try:
             parser = reqparse.RequestParser()
             parser.add_argument('request_id', type=str, location="json", required=True)
-            parser.add_argument('method', type=str, location="json", required=True)
+            parser.add_argument('method', type=str, location="json", required=False, default="drop")
             args = parser.parse_args()
             path = server_path + "/" + args.get("request_id") + "/" + "rawdata"
             file = os.listdir(path)[0]
@@ -107,9 +107,6 @@ class preprocess(Resource):
             return {"status": "Success", "Outliers": df_outlier.to_dict(orient='list')}, 200
         except Exception as e:
             return {"status": "Failed", "Description": "ERROR::" + str(e)}
-
-
-
 
 
 
@@ -191,7 +188,7 @@ class train_analytic(Resource):
                 fp = open(model_file, "r")
                 dct_model = json.load(fp)
                 fp.close()
-                result, df_out, error = analytic_class.score(df, dct_model["coeff"])
+                result, df_out, error = analytic_class.score(df, dct_model)
                 if result == "success":
 
                     if os.path.exists(path):
@@ -250,13 +247,49 @@ class get_result(Resource):
 
 @api.route('/api/v1/anova')
 class run_anova(Resource):
+
     @api.expect(anova_model)
     def post(self):
-        df = pandas.DataFrame()
-        stats = {"coeff":{}}
-        an = anova(df,stats)
+        try:
+            parser = reqparse.RequestParser()
+            parser.add_argument('request_id', type=str, required=True)
+            args = parser.parse_args()
+            model_path = os.path.join(server_path, args.request_id)
+            model_file = os.path.join(model_path, "simple_regression/model.json")
+            fp = open(model_file, "r")
+            model_dct = json.load(fp)
+            fp.close()
 
-        return {"SSE":"test"}
+            path = server_path + "/" + args.get("request_id") + "/" + "preprocess"
+            file = os.listdir(path)
+            df = pandas.read_csv(path + "/" + file[0])
+            stats, df = anova.anova(df, model_dct)
+            path = server_path + "/" + args.get("request_id") + "/" + "anova"
+            if os.path.exists(path):
+                pass
+            else:
+                os.mkdir(path)
+            file_name = os.path.join(path, "quadratic.csv")
+            df.to_csv(file_name, index=False)
+            return stats
+        except Exception as e:
+            return {"Anova Failed:": str(e)}
+
+@api.route('/api/v1/quadratic/anova')
+class anovaoutput(Resource):
+    @api.expect(file_visualize_model)
+    def get(self):
+        try:
+            parser = reqparse.RequestParser()
+            parser.add_argument('request_id', type=str, required=True)
+            args = parser.parse_args()
+            path = server_path + "/" + args.get("request_id") + "/" + "anova"
+            file_name = os.path.join(path, "quadratic.csv")
+            #fp = open(file_name, "r")
+            df = pandas.read_csv(file_name)
+            return {"data": df.to_dict(orient="list")}
+        except Exception as e:
+            return {"Failed": str(e)}
 
 if __name__ == "__main__":
     #app.run(debug=True)
